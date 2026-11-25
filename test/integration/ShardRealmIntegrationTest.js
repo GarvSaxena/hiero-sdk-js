@@ -17,6 +17,7 @@ import IntegrationTestEnv from "./client/NodeIntegrationTestEnv.js";
 import {
     createAccount,
     createFungibleToken,
+    executeWithThrottleRetry,
     getAccountBalance,
 } from "./utils/Fixtures.js";
 
@@ -185,18 +186,14 @@ describe("ShardRealm", function () {
     it("creates an account from an EVM alias in the network's shard and realm", async function () {
         const evmAddress = PrivateKey.generateECDSA().publicKey.toEvmAddress();
 
-        const receipt = await (
-            await new TransferTransaction()
+        const receipt = await executeWithThrottleRetry(env.client, () =>
+            new TransferTransaction()
                 .addHbarTransfer(env.operatorId, new Hbar(-1))
                 .addHbarTransfer(
                     AccountId.fromEvmAddress(shard, realm, evmAddress),
                     new Hbar(1),
-                )
-                .execute(env.client)
-        )
-            .getReceiptQuery()
-            .setIncludeChildren(true)
-            .execute(env.client);
+                ),
+        );
 
         const accountId = receipt.children[0].accountId;
         expectInNetwork(accountId);
